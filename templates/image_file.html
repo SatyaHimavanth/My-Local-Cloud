@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image File</title>
+</head>
+<body>
+    <h1>Image File</h1>
+    <h3 id="file_name"></h3>
+    <img src="{{ file_path }}" alt="Image">
+    <br>
+    <button><a href="{{ url_for('show_directory', path='/'.join(request.path.split('/')[1:-1])) }}" style="text-decoration: none;">Back to Directory</a></button>
+
+    <script>
+        var currentURL = window.location.href;
+        var decodedURL = decodeURIComponent(currentURL);
+        var pathArray = decodedURL.split('/');
+        var fileNameWithDir = pathArray[pathArray.length - 1];
+        var fileName = fileNameWithDir.split('\\').pop();
+        fileName = fileName.replace("%20", " ")
+        document.getElementById("file_name").textContent = fileName;
+    </script>
+</body>
+</html>
