@@ -73,6 +73,18 @@
             text-decoration: none;
             cursor: pointer;
         }
+        .progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+        }
+        .progress-bar-fill {
+            height: 20px;
+            background-color: #4caf50;
+            width: 0%;
+            text-align: center;
+            color: white;
+            line-height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -86,7 +98,7 @@
                     <a href="{{ url }}" class="image-container">
                         <img src="{{ url_for('static', filename='icons/file.png') }}" alt="File">
                         <br>
-                        <marquee width="80%">{{ name }}</marquee>
+                        <marquee width="80%" scrollamount="5">{{ name }}</marquee>
                     </a>
                     <button><a href="{{ url_for('download_file', subpath=url[1:]) }}" class="download-link">Download</a></button>
                 </div>
@@ -118,8 +130,13 @@
                 <input type="hidden" id="currentPath" name="currentPath" value="{{ request.path }}">
                 <button type="submit">Submit</button>
             </form>
+            <br>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-bar-fill" id="progressBarFill">0%</div>
+            </div>
         </div>
     </div>
+
 
     <script>
         var modal = document.getElementById("uploadModal");
@@ -136,6 +153,48 @@
                 modal.style.display = "none";
             }
         }
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const files = document.getElementById('file').files;
+            const password = document.getElementById('password').value;
+            const currentPath = document.getElementById('currentPath').value;
+            const progressBarFill = document.getElementById('progressBarFill');
+            
+            if (files.length === 0) {
+                alert('No files selected!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('password', password);
+            formData.append('currentPath', currentPath);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', this.action, true);
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBarFill.style.width = percentComplete + '%';
+                    progressBarFill.textContent = Math.round(percentComplete) + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert('Files uploaded successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Upload failed: ' + xhr.responseText);
+                }
+            };
+
+            xhr.send(formData);
+        });
     </script>
 </body>
 </html>
