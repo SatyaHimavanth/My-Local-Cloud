@@ -58,6 +58,8 @@ def serve_file(filename):
 @app.route('/upload', methods=['POST'])
 def upload_file():
     password = request.form['password']
+    if not isinstance(password, str):
+        password = str(password)
     if password != UPLOAD_PASSWORD:
         return 'Error: Invalid password', 403
     
