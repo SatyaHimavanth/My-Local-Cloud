@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Image File</title>
+    <title>MyCloud Directory</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,32 +12,189 @@
         h1 {
             text-align: center;
         }
-        div{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Automatically fit columns with minimum width of 250px */
+            grid-gap: 20px; /* Gap between grid items */
+        }
+        .grid-item {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .image-link {
+            text-align: center; /* Center align content */
+        }
+        .image-container {
+            text-decoration: none; /* Remove underline from link */
+            display: block; /* Ensure the entire block is clickable */
+            color: inherit; /* Inherit text color */
+        }
+        .image-container img {
+            display: block; /* Ensures the image is centered */
+            margin: 0 auto; /* Centers the image horizontally */
+            max-width: 100px; /* Example: Set max-width for images */
+            height: auto; /* Maintain aspect ratio */
+        }
+        .download-link {
+            text-decoration: none; /* Remove underline from link */
+            color: blue; /* Example: Sets color of download link */
+            margin-top: 5px; /* Example: Adds space between image and download link */
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+        }
+        .progress-bar-fill {
+            height: 20px;
+            background-color: #4caf50;
+            width: 0%;
+            text-align: center;
+            color: white;
+            line-height: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Image File</h1>
-    <h3 id="file_name"></h3>
-    <div id="container">
-        <img src="{{ file_path }}" alt="Image" width="60%" height="60%" id="image_id">
+    <h1>MyCloud Directory</h1>
+    
+    <div class="grid-container">
+        {% for name, url, is_file in items %}
+            <div class="grid-item">
+                {% if is_file %}
+                <div class="image-link">
+                    <a href="{{ url }}" class="image-container">
+                        <img src="{{ url_for('static', filename='icons/file.png') }}" alt="File">
+                        <br>
+                        <marquee width="80%" scrollamount="5">{{ name }}</marquee>
+                    </a>
+                    <button><a href="{{ url_for('download_file', subpath=url[1:]) }}" class="download-link">Download</a></button>
+                </div>
+                {% else %}
+                <div class="image-link">
+                    <a href="{{ url }}" class="image-container">
+                        <img src="{{ url_for('static', filename='icons/folder.png') }}" alt="Folder">
+                        <br>
+                        <marquee width="80%">{{ name }}</marquee>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        {% endfor %}
     </div>
-    <br>
-    <button><a href="{{ url_for('show_directory', path='/'.join(request.path.split('/')[1:-1])) }}" style="text-decoration: none;">Back to Directory</a></button>
+    <br></br>
+
+
+    <button id="uploadBtn">Upload</button>
+    <!-- The Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <form id="uploadForm" method="post" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br><br>
+                <label for="file">Select file:</label>
+                <input type="file" id="file" name="files" multiple required><br><br>
+                <input type="hidden" id="currentPath" name="currentPath" value="{{ request.path }}">
+                <button type="submit">Submit</button>
+            </form>
+            <br>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-bar-fill" id="progressBarFill">0%</div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
-        var currentURL = window.location.href;
-        var decodedURL = decodeURIComponent(currentURL);
-        var pathArray = decodedURL.split('/');
-        var fileNameWithDir = pathArray[pathArray.length - 1];
-        var fileName = fileNameWithDir.split('\\').pop();
-        fileName = fileName.replace("%20", " ")
-        document.getElementById("file_name").textContent = fileName;
-        document.getElementById("image_id").alt = fileName;
+        var modal = document.getElementById("uploadModal");
+        var btn = document.getElementById("uploadBtn");
+        var span = document.getElementsByClassName("close")[0];
+        btn.onclick = function() {
+            modal.style.display = "block";
+        }
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const files = document.getElementById('file').files;
+            const password = document.getElementById('password').value;
+            const currentPath = document.getElementById('currentPath').value;
+            const progressBarFill = document.getElementById('progressBarFill');
+            
+            if (files.length === 0) {
+                alert('No files selected!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('password', password);
+            formData.append('currentPath', currentPath);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', this.action, true);
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBarFill.style.width = percentComplete + '%';
+                    progressBarFill.textContent = Math.round(percentComplete) + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert('Files uploaded successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Upload failed: ' + xhr.responseText);
+                }
+            };
+
+            xhr.send(formData);
+        });
     </script>
 </body>
 </html>
