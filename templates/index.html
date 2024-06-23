@@ -89,8 +89,16 @@
 </head>
 <body>
     <h1>MyCloud Directory</h1>
+
+    <div>
+        <label for="sortDropdown">Sort By:</label>
+        <select id="sortDropdown">
+            <option value="asc">Name (A-Z)</option>
+            <option value="desc">Name (Z-A)</option>
+        </select>
+    </div>
     
-    <div class="grid-container">
+    <div class="grid-container" id="grid-container">
         {% for name, url, is_file in items %}
             <div class="grid-item">
                 {% if is_file %}
@@ -132,7 +140,6 @@
             </form>
             <br>
             <div class="progress-bar" id="progressBar">
-                <div class="progress-bar-fill" id="progressBarFill">0%</div>
             </div>
         </div>
     </div>
@@ -153,48 +160,108 @@
                 modal.style.display = "none";
             }
         }
+
         document.getElementById('uploadForm').addEventListener('submit', function(event) {
             event.preventDefault();
             
             const files = document.getElementById('file').files;
             const password = document.getElementById('password').value;
             const currentPath = document.getElementById('currentPath').value;
-            const progressBarFill = document.getElementById('progressBarFill');
+            const progressBarContainer = document.getElementById('progressBar');
             
             if (files.length === 0) {
                 alert('No files selected!');
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('password', password);
-            formData.append('currentPath', currentPath);
+            progressBarContainer.innerHTML = '';
+    
+            let results = [];
+    
             for (let i = 0; i < files.length; i++) {
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData();
+                formData.append('password', password);
+                formData.append('currentPath', currentPath);
                 formData.append('files', files[i]);
+
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.id = 'progress_bar_' + i;
+    
+                const progressFill = document.createElement('div');
+                progressFill.className = 'progress-bar-fill';
+                progressFill.id = 'progress_fill_' + i;
+                progressFill.textContent = '0%';
+
+                const uploading_file_name = document.createElement('p');
+                uploading_file_name.id = files[i].name;
+                uploading_file_name.textContent = files[i].name;
+    
+                progressBar.appendChild(progressFill);
+                progressBarContainer.appendChild(uploading_file_name);
+                progressBarContainer.appendChild(progressBar);
+    
+                xhr.open('POST', this.action, true);
+    
+                xhr.upload.onprogress = function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        progressFill.style.width = percentComplete + '%';
+                        progressFill.textContent = Math.round(percentComplete) + '%';
+                    }
+                };
+    
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        results.unshift(files[i].name + " uploaded successfully");
+                    } else {
+                        results.push(files[i].name + " upload failed: " + xhr.statusText);
+                    }
+    
+                    if (results.length === files.length) {
+                        alert(results.join("\n"));
+                        window.location.reload();
+                    }
+                };
+    
+                xhr.onerror = function() {
+                    results.push(files[i].name + " upload failed: Network error");
+    
+                    if (results.length === files.length) {
+                        alert(results.join("\n"));
+                        window.location.reload();
+                    }
+                };
+    
+                xhr.send(formData);
+            }
+        });
+
+        document.getElementById('sortDropdown').addEventListener('change', function() {
+            sortGridItems(this.value);
+        });
+
+        function sortGridItems(order) {
+            const gridContainer = document.getElementById('grid-container');
+            const itemsArray = Array.from(gridContainer.getElementsByClassName('grid-item'));
+
+            itemsArray.sort((a, b) => {
+                const nameA = a.querySelector('marquee').textContent.trim().toLowerCase();
+                const nameB = b.querySelector('marquee').textContent.trim().toLowerCase();
+                if (order === 'asc') {
+                    return nameA.localeCompare(nameB);
+                } else {
+                    return nameB.localeCompare(nameA);
+                }
+            });
+
+            while (gridContainer.firstChild) {
+                gridContainer.removeChild(gridContainer.firstChild);
             }
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', this.action, true);
-
-            xhr.upload.onprogress = function(event) {
-                if (event.lengthComputable) {
-                    const percentComplete = (event.loaded / event.total) * 100;
-                    progressBarFill.style.width = percentComplete + '%';
-                    progressBarFill.textContent = Math.round(percentComplete) + '%';
-                }
-            };
-
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    alert('Files uploaded successfully!');
-                    window.location.reload();
-                } else {
-                    alert('Upload failed: ' + xhr.responseText);
-                }
-            };
-
-            xhr.send(formData);
-        });
+            itemsArray.forEach(item => gridContainer.appendChild(item));
+        }
     </script>
 </body>
 </html>
