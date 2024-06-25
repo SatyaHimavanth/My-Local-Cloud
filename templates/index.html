@@ -14,52 +14,66 @@
         }
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Automatically fit columns with minimum width of 250px */
-            grid-gap: 20px; /* Gap between grid items */
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-gap: 20px;
         }
-        .grid-item {
+        
+        .grid-item-file {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .grid-item-folder {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
         .image-link {
-            text-align: center; /* Center align content */
+            text-align: center;
         }
         .image-container {
-            text-decoration: none; /* Remove underline from link */
-            display: block; /* Ensure the entire block is clickable */
-            color: inherit; /* Inherit text color */
+            text-decoration: none;
+            display: block;
+            color: inherit;
         }
         .image-container img {
-            display: block; /* Ensures the image is centered */
-            margin: 0 auto; /* Centers the image horizontally */
-            max-width: 100px; /* Example: Set max-width for images */
-            height: auto; /* Maintain aspect ratio */
+            display: block;
+            margin: 0 auto;
+            max-width: 100px;
+            height: auto;
         }
         .download-link {
-            text-decoration: none; /* Remove underline from link */
-            color: blue; /* Example: Sets color of download link */
-            margin-top: 5px; /* Example: Adds space between image and download link */
+            text-decoration: none;
+            color: blue;
+            margin-top: 5px;
+        }
+        .delete {
+            display: none;
+        }
+        .delete-link{
+            text-decoration: none;
+            color: red;
+            margin-top: 5px;
         }
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 1;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgb(0,0,0); /* Fallback color */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
             padding-top: 60px;
         }
         .modal-content {
             background-color: #fefefe;
-            margin: 5% auto; /* 15% from the top and centered */
+            margin: 5% auto;
             padding: 20px;
             border: 1px solid #888;
-            width: 80%; /* Could be more or less, depending on screen size */
+            width: 80%;
         }
         .close {
             color: #aaa;
@@ -87,7 +101,7 @@
         }
     </style>
 </head>
-<body>
+<body onload="checkSessionCode()">
     <h1>MyCloud Directory</h1>
 
     <div>
@@ -100,26 +114,32 @@
     
     <div class="grid-container" id="grid-container">
         {% for name, url, is_file in items %}
-            <div class="grid-item">
-                {% if is_file %}
-                <div class="image-link">
-                    <a href="{{ url }}" class="image-container">
-                        <img src="{{ url_for('static', filename='icons/file.png') }}" alt="File">
-                        <br>
-                        <marquee width="80%" scrollamount="5">{{ name }}</marquee>
-                    </a>
-                    <button><a href="{{ url_for('download_file', subpath=url[1:]) }}" class="download-link">Download</a></button>
+            {% if not is_file %}
+                <div class="grid-item-folder">
+                    <div class="image-link">
+                        <a href="{{ url }}" class="image-container">
+                            <img src="{{ url_for('static', filename='icons/folder.png') }}" alt="Folder">
+                            <br>
+                            <marquee width="80%">{{ name }}</marquee>
+                        </a>
+                    </div>
                 </div>
-                {% else %}
-                <div class="image-link">
-                    <a href="{{ url }}" class="image-container">
-                        <img src="{{ url_for('static', filename='icons/folder.png') }}" alt="Folder">
-                        <br>
-                        <marquee width="80%">{{ name }}</marquee>
-                    </a>
+            {% endif %}
+        {% endfor %}
+        {% for name, url, is_file in items %}
+            {% if is_file %}
+                <div class="grid-item-file">
+                    <div class="image-link">
+                        <a href="{{ url }}" class="image-container">
+                            <img src="{{ url_for('static', filename='icons/file.png') }}" alt="File">
+                            <br>
+                            <marquee width="80%" scrollamount="5">{{ name }}</marquee>
+                        </a>
+                        <button><a href="{{ url_for('download_file', subpath=url[1:]) }}" class="download-link">Download</a></button>
+                        <button class="delete"><a href="{{ url_for('delete_file', subpath=url[1:]) }}" class="delete-link">Delete</a></button>
+                    </div>
                 </div>
-                {% endif %}
-            </div>
+            {% endif %}
         {% endfor %}
     </div>
     <br></br>
@@ -244,23 +264,91 @@
 
         function sortGridItems(order) {
             const gridContainer = document.getElementById('grid-container');
-            const itemsArray = Array.from(gridContainer.getElementsByClassName('grid-item'));
-
-            itemsArray.sort((a, b) => {
+            const fileitemsArray = Array.from(gridContainer.getElementsByClassName('grid-item-file'));
+            const folderitemsArray = Array.from(gridContainer.getElementsByClassName('grid-item-folder'));
+            
+            fileitemsArray.sort((a, b) => {
                 const nameA = a.querySelector('marquee').textContent.trim().toLowerCase();
                 const nameB = b.querySelector('marquee').textContent.trim().toLowerCase();
-                if (order === 'asc') {
-                    return nameA.localeCompare(nameB);
-                } else {
+                if (order === 'desc') {
                     return nameB.localeCompare(nameA);
+                } else {
+                    return nameA.localeCompare(nameB);
                 }
             });
+            folderitemsArray.sort((a, b) => {
+                const nameA = a.querySelector('marquee').textContent.trim().toLowerCase();
+                const nameB = b.querySelector('marquee').textContent.trim().toLowerCase();
+                if (order === 'desc') {
+                    return nameB.localeCompare(nameA);
+                } else {
+                    return nameA.localeCompare(nameB);
+                }
+            });
+            if(order=='asc'){
+                while (gridContainer.firstChild) {
+                    gridContainer.removeChild(gridContainer.firstChild);
+                }
+                folderitemsArray.forEach(item => gridContainer.appendChild(item));
+                fileitemsArray.forEach(item => gridContainer.appendChild(item));
 
-            while (gridContainer.firstChild) {
-                gridContainer.removeChild(gridContainer.firstChild);
             }
+            else{
+                while (gridContainer.firstChild) {
+                    gridContainer.removeChild(gridContainer.firstChild);
+                }
+                folderitemsArray.forEach(item => gridContainer.appendChild(item));
+                fileitemsArray.forEach(item => gridContainer.appendChild(item));
+            }
+        }
 
-            itemsArray.forEach(item => gridContainer.appendChild(item));
+        document.addEventListener('DOMContentLoaded', function() {
+            var sessionCode = sessionStorage.getItem('session_code');
+            var deleteButtons = document.querySelectorAll('.delete');
+            
+            if (sessionCode) {
+              deleteButtons.forEach(function(button) {
+                button.style.display = 'inline-block';
+              });
+            } else {
+              deleteButtons.forEach(function(button) {
+                button.style.display = 'none';
+              });
+            }
+        });
+
+        document.querySelectorAll('.delete').forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                const deleteLink = this.querySelector('a.delete-link');
+                const originalHref = deleteLink.href;
+                let filename = originalHref.split('/').pop();
+                filename = filename.replaceAll("%2520", " ");
+    
+                if (confirm(`${filename} is going to be deleted`)) {
+                    deleteLink.href = originalHref;
+                    window.location.href = originalHref;
+                } else {
+                    deleteLink.href = '#';
+                    setTimeout(() => {
+                        deleteLink.href = originalHref;
+                    }, 100);
+                }
+            });
+        });
+
+        function checkSessionCode() {
+            let sessionCode = sessionStorage.getItem('session_code');
+            let sessionCodeExpiry = sessionStorage.getItem('session_code_expiry');
+
+            if (sessionCode && sessionCodeExpiry) {
+                let currentTime = Date.now();
+                if (currentTime > sessionCodeExpiry) {
+                    sessionStorage.removeItem('session_code');
+                    sessionStorage.removeItem('session_code_expiry');
+                    //alert('Session has expired. Please log in again.');
+                }
+            }
         }
     </script>
 </body>
