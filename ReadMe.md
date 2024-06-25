@@ -1,26 +1,26 @@
-To run this program you need to have python (version 3 or above preferred) installed and configured in your system.
+To run this program you need to have Python (version 3 or above preferred) installed and configured in your system.
 
 Steps to host your folder:
 
 Step 1:
-    After installing and adding Env variables of python, pip install required libraries by using below command
-    pip install Flask
+    After installing and adding Env variables of python, pip install required libraries by using the below command
+    pip install Flask send2trash
 
 Step 2:
     Open the project folder in vs code   
 
 Step 2:
-    assign your folder path to base_directory on "app.py" in "line 25"
-    for example your want to host movies folder in D drive do this
+    assign your folder path to base_directory on "app.py" in "line 33"
+    for example, if you want to host a movies folder in D drive do this
     base_directory = "D:\\Movies"
 
 Step 3:
-    run the project using below code
+    run the project using the below code
     py app.py
 
 Step 4:
-    click on the URL displayed in terminal to view your folder live.
-    The same URL can be used to access the files on any device when connected to same network.
+    click on the URL displayed in the terminal to view your folder live.
+    The same URL can be used to access the files on any device when connected to the same network.
 
 
 To start hosting as soon as your system starts:
