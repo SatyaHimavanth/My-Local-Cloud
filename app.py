@@ -1,9 +1,16 @@
-from flask import Flask, render_template, send_file, url_for, abort, send_from_directory, request, redirect
+from flask import Flask, render_template, send_file, url_for, abort, send_from_directory, request, redirect, jsonify
 import os
 import socket
 import sys
+import uuid
+from send2trash import send2trash
 
-UPLOAD_PASSWORD = "" # Add your password to upload files
+UPLOAD_PASSWORD = "" # password to enable upload 
+
+USER_DATA = {
+    "username": "", # admin username
+    "password": ""  # admin password
+}
 
 def get_working_directory():
     if hasattr(sys, '_MEIPASS'):
@@ -22,11 +29,27 @@ def get_ip_address():
     return ip_address
 
 app = Flask(__name__)
-base_directory = "" # Add your folder absolute path
+
+base_directory = ""
 
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html', items=get_items(base_directory))
+
+@app.route('/admin', methods=['GET'])
+def admin():
+    return render_template('admin.html')
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if username == USER_DATA['username'] and password == USER_DATA['password']:
+        session_code = str(uuid.uuid4())
+        return jsonify({"success": True, "session_code": session_code}), 200
+    else:
+        return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 @app.route('/<path:path>', methods=['GET'])
 def show_directory(path):
@@ -47,6 +70,17 @@ def download_file(subpath):
     file_path = os.path.normpath(os.path.join(base_directory, subpath))
     if os.path.isfile(file_path):
         return send_from_directory(base_directory, subpath, as_attachment=True)
+    else:
+        return f'Error: File {file_path} not found', 404
+    
+@app.route('/delete/<path:subpath>', methods=['GET'])
+def delete_file(subpath):
+    subpath = subpath.replace("%5C", "/")
+    subpath = subpath.replace("%20", " ")
+    file_path = os.path.normpath(os.path.join(base_directory, subpath))
+    if os.path.isfile(file_path):
+        send2trash(file_path)
+        return redirect(request.referrer or '/')
     else:
         return f'Error: File {file_path} not found', 404
     
