@@ -35,4 +35,3 @@ C:\Users\hp\AppData\Local\Programs\Python\Python311\python.exe D:\myhosting_flas
 Now save the file with any name ex: onstart_cloud.bat
 Press win+R and enter   shell:startup
 Place the .bat file in that folder
-

@@ -6,7 +6,7 @@ import uuid
 from send2trash import send2trash
 
 UPLOAD_PASSWORD = "" # password to enable upload 
-
+CREATE_PASSWORD = "" # password to create folder
 USER_DATA = {
     "username": "", # admin username
     "password": ""  # admin password
@@ -30,7 +30,7 @@ def get_ip_address():
 
 app = Flask(__name__)
 
-base_directory = ""
+base_directory = "" # your hosting dir
 
 @app.route('/', methods=['GET'])
 def index():
@@ -79,6 +79,7 @@ def delete_file(subpath):
     subpath = subpath.replace("%20", " ")
     file_path = os.path.normpath(os.path.join(base_directory, subpath))
     if os.path.isfile(file_path):
+        # os.remove(file_path)
         send2trash(file_path)
         return redirect(request.referrer or '/')
     else:
@@ -107,6 +108,37 @@ def upload_file():
         if file:
             file_path = os.path.join(upload_path, file.filename)
             file.save(file_path)
+    return redirect(request.form['currentPath'])
+
+@app.route('/createFolder', methods=['POST'])
+def create_folder():
+    password = request.form['password']
+    if not isinstance(password, str):
+        password = str(password)
+    if password != CREATE_PASSWORD:
+        return 'Error: Invalid password', 403
+    
+    folder_name = request.form['folder'];
+    reservedChars = '<>:"\\|?.*';
+    reservedNames = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"]
+    for char in reservedChars:
+        if char in folder_name:
+            return 'Error: Invalid folder name', 400
+    for char in reservedNames:
+        if char in folder_name:
+            return 'Error: Invalid folder name', 400
+    if '/' in folder_name:
+        folder_name = folder_name.split('/')
+        for i in range(len(folder_name)):
+            folder_name[i] = folder_name[i].strip()
+        folder_name = '/'.join(folder_name)
+        
+    current_path = request.form['currentPath'].strip('/')
+    folder_path = os.path.join(base_directory, current_path)
+    if not os.path.isdir(folder_path):
+        return 'Error: Invalid upload directory', 400
+    os.makedirs(os.path.join(folder_path, folder_name), exist_ok=True)
+    
     return redirect(request.form['currentPath'])
 
 def render_file(file_path, relative_path):
@@ -145,6 +177,7 @@ def render_file(file_path, relative_path):
     
     else:
         return send_file(file_path)
+        # abort(415, description=f'Unsupported file type: {ext}')
 
 def get_items(directory):
     items = []
