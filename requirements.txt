@@ -1,1 +1,2 @@
-pip install Flask send2trash
+pip install Flask
+pip install send2trash
