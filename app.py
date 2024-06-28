@@ -5,13 +5,6 @@ import sys
 import uuid
 from send2trash import send2trash
 
-UPLOAD_PASSWORD = "" # password to enable upload 
-CREATE_PASSWORD = "" # password to create folder
-USER_DATA = {
-    "username": "", # admin username
-    "password": ""  # admin password
-}
-
 def get_working_directory():
     if hasattr(sys, '_MEIPASS'):
         return sys._MEIPASS
@@ -30,7 +23,7 @@ def get_ip_address():
 
 app = Flask(__name__)
 
-base_directory = "" # your hosting dir
+base_directory = os.path.join(get_working_directory(), 'cloud') # your hosting dir
 
 @app.route('/', methods=['GET'])
 def index():
@@ -43,8 +36,8 @@ def admin():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    username = os.environ['ADMIN']
+    password = os.environ['PASSWORD']
     if username == USER_DATA['username'] and password == USER_DATA['password']:
         session_code = str(uuid.uuid4())
         return jsonify({"success": True, "session_code": session_code}), 200
@@ -95,7 +88,7 @@ def upload_file():
     password = request.form['password']
     if not isinstance(password, str):
         password = str(password)
-    if password != UPLOAD_PASSWORD:
+    if password != os.environ['UPLOAD_PASSWORD']:
         return 'Error: Invalid password', 403
     
     current_path = request.form['currentPath'].strip('/')
@@ -115,7 +108,7 @@ def create_folder():
     password = request.form['password']
     if not isinstance(password, str):
         password = str(password)
-    if password != CREATE_PASSWORD:
+    if password != os.environ['CREATE_PASSWORD']:
         return 'Error: Invalid password', 403
     
     folder_name = request.form['folder'];
