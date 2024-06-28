@@ -8,6 +8,7 @@
 <body onload="checkSessionCode()" background>
     <h1>MyCloud Directory</h1>
     <div class="search-container">
+        <p style="display:none;" id="secret_code">{{code}}</p>
         <input type="text" name="search_name" id="search_name" list="search_names" placeholder="Search">
         <datalist id="search_names">
             {% for item in items %}
