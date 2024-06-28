@@ -36,9 +36,9 @@ def admin():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    username = os.environ['ADMIN']
-    password = os.environ['PASSWORD']
-    if username == USER_DATA['username'] and password == USER_DATA['password']:
+    username = data.get('username')
+    password = data.get('password')
+    if username == os.environ['ADMIN'] and password == os.environ['PASSWORD']:
         session_code = str(uuid.uuid4())
         return jsonify({"success": True, "session_code": session_code}), 200
     else:
