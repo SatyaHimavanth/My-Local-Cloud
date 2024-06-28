@@ -54,7 +54,10 @@ def show_directory(path):
         return render_file(directory_path, path)
     
     else:
-        return f'Error: {path} not found', 404
+        try:
+            return render_template('index.html', itemps=get_items(base_directory))
+        except:
+            return f'Error: {path} not found', 404
 
 @app.route('/download/<path:subpath>', methods=['GET'])
 def download_file(subpath):
