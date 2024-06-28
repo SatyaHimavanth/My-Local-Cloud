@@ -183,5 +183,4 @@ def get_items(directory):
     return items
 
 if __name__ == '__main__':
-    ip = get_ip_address()
-    app.run(host=ip, port=5000, debug=True)
+    app.run()
