@@ -24,10 +24,10 @@ def get_ip_address():
 app = Flask(__name__)
 
 base_directory = os.path.join(get_working_directory(), 'cloud') # your hosting dir
-
+session_code = None
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', items=get_items(base_directory))
+    return render_template('index.html', items=get_items(base_directory), code=session_code)
 
 @app.route('/admin', methods=['GET'])
 def admin():
@@ -39,6 +39,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
     if username == os.environ['ADMIN'] and password == os.environ['PASSWORD']:
+        global session_code
         session_code = str(uuid.uuid4())
         return jsonify({"success": True, "session_code": session_code}), 200
     else:
@@ -48,7 +49,7 @@ def login():
 def show_directory(path):
     directory_path = os.path.join(base_directory, path)
     if os.path.isdir(directory_path):
-        return render_template('index.html', items=get_items(directory_path))
+        return render_template('index.html', items=get_items(directory_path), code=session_code)
     
     elif os.path.isfile(directory_path):
         return render_file(directory_path, path)
