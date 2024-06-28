@@ -224,8 +224,8 @@ function sortGridItems(order) {
 document.addEventListener('DOMContentLoaded', function() {
     var sessionCode = sessionStorage.getItem('session_code');
     var deleteButtons = document.querySelectorAll('.delete');
-    
-    if (sessionCode) {
+    var code = document.getElementById('secret_code').innerText;
+    if (sessionCode==code) {
         deleteButtons.forEach(function(button) {
         button.style.display = 'inline-block';
         });
