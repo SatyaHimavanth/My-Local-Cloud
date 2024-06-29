@@ -48,12 +48,10 @@ def login():
 @app.route('/<path:path>', methods=['GET'])
 def show_directory(path):
     directory_path = os.path.join(base_directory, path)
-    if os.path.isdir(directory_path):
+    if os.path.exists(directory_path):
         return render_template('index.html', items=get_items(directory_path), code=session_code)
-    
     elif os.path.isfile(directory_path):
         return render_file(directory_path, path)
-    
     else:
         try:
             return render_template('index.html', itemps=get_items(base_directory))
