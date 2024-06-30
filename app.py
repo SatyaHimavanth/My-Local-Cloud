@@ -7,13 +7,6 @@ import shutil
 import tempfile
 from send2trash import send2trash
 
-UPLOAD_PASSWORD = "12345678" # password to enable upload 
-CREATE_PASSWORD = "12345678" # password to create folder
-USER_DATA = {
-    "username": "admin", # admin username
-    "password": "Strong"  # admin password
-}
-
 def get_working_directory():
     if hasattr(sys, '_MEIPASS'):
         return sys._MEIPASS
@@ -32,8 +25,7 @@ def get_ip_address():
 
 app = Flask(__name__)
 
-base_directory = os.path.join(get_working_directory(), 'mycloud')
-base_directory = "C:\\Users\\hp\\Desktop"
+base_directory = os.path.join(get_working_directory(), 'cloud')
 
 session_code = None
 
