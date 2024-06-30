@@ -1,1 +1,3 @@
-pip install Flask send2trash
+send2trash
+Flask
+Gunicorn

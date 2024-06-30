@@ -3,13 +3,15 @@ import os
 import socket
 import sys
 import uuid
+import shutil
+import tempfile
 from send2trash import send2trash
 
-UPLOAD_PASSWORD = "" # password to enable upload 
-CREATE_PASSWORD = "" # password to create folder
+UPLOAD_PASSWORD = "12345678" # password to enable upload 
+CREATE_PASSWORD = "12345678" # password to create folder
 USER_DATA = {
-    "username": "", # admin username
-    "password": ""  # admin password
+    "username": "admin", # admin username
+    "password": "Strong"  # admin password
 }
 
 def get_working_directory():
@@ -30,22 +32,26 @@ def get_ip_address():
 
 app = Flask(__name__)
 
-base_directory = "" # your hosting dir
+base_directory = os.path.join(get_working_directory(), 'mycloud')
+base_directory = "C:\\Users\\hp\\Desktop"
+
+session_code = None
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', items=get_items(base_directory))
+    return render_template('index.html', items=get_items(base_directory), code=session_code)
 
 @app.route('/admin', methods=['GET'])
 def admin():
     return render_template('admin.html')
 
-@app.route('/login', methods=['POST'])
+@app.route('/adminlogin', methods=['POST'])
 def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    if username == USER_DATA['username'] and password == USER_DATA['password']:
+    if username == os.environ['ADMIN'] and password == os.environ['PASSWORD']:
+        global session_code
         session_code = str(uuid.uuid4())
         return jsonify({"success": True, "session_code": session_code}), 200
     else:
@@ -54,14 +60,15 @@ def login():
 @app.route('/<path:path>', methods=['GET'])
 def show_directory(path):
     directory_path = os.path.join(base_directory, path)
-    if os.path.isdir(directory_path):
-        return render_template('index.html', items=get_items(directory_path))
-    
+    if os.path.exists(directory_path) and os.path.isdir(directory_path):
+        return render_template('index.html', items=get_items(directory_path), code=session_code)
     elif os.path.isfile(directory_path):
         return render_file(directory_path, path)
-    
     else:
-        return f'Error: {path} not found', 404
+        try:
+            return render_template('index.html', items=get_items(base_directory))
+        except:
+            return f'Error: {path} not found', 404
 
 @app.route('/download/<path:subpath>', methods=['GET'])
 def download_file(subpath):
@@ -95,7 +102,7 @@ def upload_file():
     password = request.form['password']
     if not isinstance(password, str):
         password = str(password)
-    if password != UPLOAD_PASSWORD:
+    if password != os.environ['UPLOAD_PASSWORD']:
         return 'Error: Invalid password', 403
     
     current_path = request.form['currentPath'].strip('/')
@@ -115,7 +122,7 @@ def create_folder():
     password = request.form['password']
     if not isinstance(password, str):
         password = str(password)
-    if password != CREATE_PASSWORD:
+    if password != os.environ['CREATE_PASSWORD']:
         return 'Error: Invalid password', 403
     
     folder_name = request.form['folder'];
@@ -140,6 +147,40 @@ def create_folder():
     os.makedirs(os.path.join(folder_path, folder_name), exist_ok=True)
     
     return redirect(request.form['currentPath'])
+
+@app.route('/delete_folder', methods=['POST'])
+def delete_folder():
+    data = request.get_json()
+    folder_path = data.get('folderPath')[1:]
+    folder_path = folder_path.replace("/", "\\")
+    folder_path = os.path.join(base_directory, folder_path)
+    try:
+        send2trash(folder_path)
+        return jsonify(success=True)
+    except Exception as e:
+        print(f"Error deleting folder: {e}")
+        return jsonify(success=False)
+
+@app.route('/download_folder', methods=['POST'])
+def download_folder():
+    data = request.get_json()
+    folder_path = data.get('folderPath')[1:]
+    folder_path = folder_path.replace("/", "\\")
+    folder_path = os.path.join(base_directory, folder_path)
+    parent_dir = os.path.dirname(folder_path)
+    folder_name = data.get('folderName')
+    zip_path = os.path.join(parent_dir, "ZIP")
+    try:
+        if not os.path.exists(folder_path):
+            return jsonify({"success": False, "message": "Folder not found"}), 404
+        with tempfile.NamedTemporaryFile(delete=False) as temp_zip:
+            temp_zip.close()
+            zip_path = temp_zip.name
+            shutil.make_archive(zip_path, 'zip', folder_path)
+            return send_file(zip_path+".zip", as_attachment=True, download_name=folder_name+'.zip', mimetype='application/zip')
+    except Exception as e:
+        print(f"Error zipping and downloading folder: {e}")
+        return jsonify({"success": False, "message": "Failed to zip and download folder"}), 500
 
 def render_file(file_path, relative_path):
     ext = os.path.splitext(file_path)[1].lower()

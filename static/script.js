@@ -224,8 +224,8 @@ function sortGridItems(order) {
 document.addEventListener('DOMContentLoaded', function() {
     var sessionCode = sessionStorage.getItem('session_code');
     var deleteButtons = document.querySelectorAll('.delete');
-    
-    if (sessionCode) {
+    var code = document.getElementById('secret_code').innerText;
+    if (sessionCode==code) {
         deleteButtons.forEach(function(button) {
         button.style.display = 'inline-block';
         });
@@ -235,19 +235,106 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const toggleButton = document.getElementById('darkModeToggle');
-    const body = document.body;
-
-    toggleButton.addEventListener('click', function() {
-        if (body.classList.contains('light-mode')) {
-            body.classList.remove('light-mode');
-            body.classList.add('dark-mode');
-        } else {
-            body.classList.remove('dark-mode');
-            body.classList.add('light-mode');
+    const gridItems = document.querySelectorAll('.grid-item-folder');
+    const contextMenu = document.getElementById('context-menu');
+    gridItems.forEach(item => {
+        if(sessionCode==code){
+            contextMenu.querySelector('.context-menu-item-delete').style.display = 'block';
         }
+        item.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const { clientX: mouseX, clientY: mouseY } = e;
+
+            contextMenu.style.top = `${mouseY + scrollTop}px`;
+            contextMenu.style.left = `${mouseX + scrollLeft}px`;
+            contextMenu.style.display = 'block';
+
+            const folderName = item.querySelector(".single-line").innerText;
+            contextMenu.dataset.folderName = folderName;
+            const folderPath = item.querySelector('.image-container').href;
+            const localFolderPath = new URL(folderPath).pathname;
+            contextMenu.dataset.folderPath = decodeURIComponent(localFolderPath);
+        });
+    });
+
+    document.addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+    });
+
+    contextMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
     });
 });
+
+function deleteItem() {
+    const contextMenu = document.getElementById('context-menu');
+    const folderName = contextMenu.dataset.folderName;
+    const folderPath = contextMenu.dataset.folderPath;
+
+    if (confirm(`Delete ${folderName}?`)) {
+        fetch('/delete_folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ folderPath: folderPath })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Folder deleted successfully');
+                window.location.reload();
+            } else {
+                alert('Failed to delete folder');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete folder');
+        });
+    }
+}
+
+function downloadItem() {
+    const contextMenu = document.getElementById('context-menu');
+    const folderName = contextMenu.dataset.folderName;
+    const folderPath = contextMenu.dataset.folderPath;
+    fetch('/download_folder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ folderPath: folderPath, folderName: folderName })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = folderName + '.zip';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to download folder as zip');
+    });
+}
 
 document.querySelectorAll('.delete').forEach(button => {
     button.addEventListener('click', function(event) {

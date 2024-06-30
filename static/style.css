@@ -156,6 +156,26 @@ h1 {
     color: rgb(0, 0, 0);
     margin-top: 5px;
 }
+.context-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+.context-menu-item-delete {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: none;
+}
+.context-menu-item-download {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.context-menu-item:hover {
+    background-color: #f0f0f0;
+}
 .modal {
     display: none;
     position: fixed;

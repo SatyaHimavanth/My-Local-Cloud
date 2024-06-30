@@ -8,6 +8,7 @@
 <body onload="checkSessionCode()" background>
     <h1>MyCloud Directory</h1>
     <div class="search-container">
+        <p style="display:none;" id="secret_code">{{code}}</p>
         <input type="text" name="search_name" id="search_name" list="search_names" placeholder="Search">
         <datalist id="search_names">
             {% for item in items %}
@@ -44,6 +45,12 @@
                 </div>
             {% endif %}
         {% endfor %}
+        
+        <div id="context-menu" class="context-menu">
+            <div class="context-menu-item-delete" onclick="deleteItem()">Delete</div>
+            <div class="context-menu-item-download" onclick="downloadItem()">Download</div>
+        </div>
+
         {% for name, url, is_file in items %}
             {% if is_file %}
                 <div class="grid-item-file">
