@@ -42,7 +42,7 @@ def index():
 def admin():
     return render_template('admin.html')
 
-@app.route('/login', methods=['POST'])
+@app.route('/adminlogin', methods=['POST'])
 def login():
     data = request.json
     username = data.get('username')
@@ -66,9 +66,6 @@ def show_directory(path):
             return render_template('index.html', items=get_items(base_directory), code=session_code)
         except:
             return f'Error: {path} not found', 404
-    
-    else:
-        return f'Error: {path} not found', 404
 
 @app.route('/download/<path:subpath>', methods=['GET'])
 def download_file(subpath):
