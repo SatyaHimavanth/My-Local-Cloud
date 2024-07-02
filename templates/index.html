@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <title>MyCloud Directory</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
 <body onload="checkSessionCode()" background>
     <h1>MyCloud Directory</h1>
     <div class="search-container">
+        <p style="display:none;" id="secret_code">{{code}}</p>
         <input type="text" name="search_name" id="search_name" list="search_names" placeholder="Search">
         <datalist id="search_names">
             {% for item in items %}
@@ -44,6 +46,12 @@
                 </div>
             {% endif %}
         {% endfor %}
+        
+        <div id="context-menu" class="context-menu">
+            <div class="context-menu-item-delete" onclick="deleteItem()">Delete</div>
+            <div class="context-menu-item-download" onclick="downloadItem()">Download</div>
+        </div>
+
         {% for name, url, is_file in items %}
             {% if is_file %}
                 <div class="grid-item-file">
@@ -68,7 +76,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <form id="uploadForm" method="post" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
-                <label for="password">Password:</label>
+                <label for="upload_password">Password:</label>
                 <input type="password" id="upload_password" name="password" required><br><br>
                 <label for="file">Select file:</label>
                 <input type="file" id="file" name="files" multiple required><br><br>
@@ -85,9 +93,9 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <form id="createFolderForm" method="post" enctype="multipart/form-data" action="{{ url_for('create_folder') }}">
-                <label for="password">Password:</label>
+                <label for="createfolder_password">Password:</label>
                 <input type="password" id="createfolder_password" name="password" required><br><br>
-                <label for="folderNmae">Enter folder name:</label>
+                <label for="folderName">Enter folder name:</label>
                 <input type="text" id="folderName" name="folderName" required><br><br>
                 <input type="hidden" id="createfolder_currentPath" name="currentPath" value="{{ request.path }}">
                 <button type="submit">Submit</button>
