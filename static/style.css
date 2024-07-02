@@ -11,7 +11,7 @@ h1 {
 }
 .search-container {
     display: flex;
-    max-width: 400px;
+    max-width: 50%;
     margin: 15px auto;
     justify-content: flex-end;
 }
@@ -64,6 +64,11 @@ h1 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     grid-gap: 20px;
+}
+@media (max-width: 1080px) {
+    .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
 }
 .grid-item-file {
     position: relative;
@@ -139,6 +144,7 @@ h1 {
     border-radius: 10px 10px 10px 10px;
     cursor: pointer;
     position: relative;
+    display: inline-block;
 }
 .delete {
     display: none;
@@ -155,6 +161,26 @@ h1 {
     text-decoration: none;
     color: rgb(0, 0, 0);
     margin-top: 5px;
+}
+.context-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+.context-menu-item-delete {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: none;
+}
+.context-menu-item-download {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.context-menu-item:hover {
+    background-color: #f0f0f0;
 }
 .modal {
     display: none;
