@@ -3,8 +3,10 @@ import os
 import socket
 import sys
 import uuid
+import shutil
+import tempfile
 from send2trash import send2trash
-
+session_code = None
 UPLOAD_PASSWORD = "" # password to enable upload 
 CREATE_PASSWORD = "" # password to create folder
 USER_DATA = {
@@ -34,7 +36,7 @@ base_directory = "" # your hosting dir
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', items=get_items(base_directory))
+    return render_template('index.html', items=get_items(base_directory), code=session_code)
 
 @app.route('/admin', methods=['GET'])
 def admin():
@@ -46,6 +48,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
     if username == USER_DATA['username'] and password == USER_DATA['password']:
+        global session_code
         session_code = str(uuid.uuid4())
         return jsonify({"success": True, "session_code": session_code}), 200
     else:
@@ -54,11 +57,15 @@ def login():
 @app.route('/<path:path>', methods=['GET'])
 def show_directory(path):
     directory_path = os.path.join(base_directory, path)
-    if os.path.isdir(directory_path):
-        return render_template('index.html', items=get_items(directory_path))
-    
+    if os.path.exists(directory_path) and os.path.isdir(directory_path):
+        return render_template('index.html', items=get_items(directory_path), code=session_code)
     elif os.path.isfile(directory_path):
         return render_file(directory_path, path)
+    else:
+        try:
+            return render_template('index.html', items=get_items(base_directory), code=session_code)
+        except:
+            return f'Error: {path} not found', 404
     
     else:
         return f'Error: {path} not found', 404
@@ -90,6 +97,20 @@ def serve_file(filename):
     file_path = os.path.join(base_directory, filename)
     return send_file(file_path)
 
+@app.route('/available_space', methods=['POST'])
+def available_space():
+    data = request.get_json()
+    free_space = 0
+    if data:
+        folder_path = data.get('folderPath').split('\\')
+        folder_path.pop()
+        folder_path = '\\'.join(folder_path)
+        folder_path = os.path.join(base_directory, folder_path)
+        free_space = shutil.disk_usage(folder_path)[2]
+    else:
+        free_space = shutil.disk_usage(os.getcwd())[2]
+    return jsonify(free_space=free_space)
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     password = request.form['password']
@@ -105,9 +126,11 @@ def upload_file():
     if not os.path.isdir(upload_path):
         return 'Error: Invalid upload directory', 400
     for file in files:
-        if file:
+        if file and shutil.disk_usage(upload_path)[2]>=int(request.form['file_size']):
             file_path = os.path.join(upload_path, file.filename)
             file.save(file_path)
+        else:
+            return 'Error: Insufficient Disk space', 507
     return redirect(request.form['currentPath'])
 
 @app.route('/createFolder', methods=['POST'])
@@ -140,6 +163,40 @@ def create_folder():
     os.makedirs(os.path.join(folder_path, folder_name), exist_ok=True)
     
     return redirect(request.form['currentPath'])
+
+@app.route('/delete_folder', methods=['POST'])
+def delete_folder():
+    data = request.get_json()
+    folder_path = data.get('folderPath')[1:]
+    folder_path = folder_path.replace("/", "\\")
+    folder_path = os.path.join(base_directory, folder_path)
+    try:
+        send2trash(folder_path)
+        return jsonify(success=True)
+    except Exception as e:
+        print(f"Error deleting folder: {e}")
+        return jsonify(success=False)
+
+@app.route('/download_folder', methods=['POST'])
+def download_folder():
+    data = request.get_json()
+    folder_path = data.get('folderPath')[1:]
+    folder_path = folder_path.replace("/", "\\")
+    folder_path = os.path.join(base_directory, folder_path)
+    parent_dir = os.path.dirname(folder_path)
+    folder_name = data.get('folderName')
+    zip_path = os.path.join(parent_dir, "ZIP")
+    try:
+        if not os.path.exists(folder_path):
+            return jsonify({"success": False, "message": "Folder not found"}), 404
+        with tempfile.NamedTemporaryFile(delete=False) as temp_zip:
+            temp_zip.close()
+            zip_path = temp_zip.name
+            shutil.make_archive(zip_path, 'zip', folder_path)
+            return send_file(zip_path+".zip", as_attachment=True, download_name=folder_name+'.zip', mimetype='application/zip')
+    except Exception as e:
+        print(f"Error zipping and downloading folder: {e}")
+        return jsonify({"success": False, "message": "Failed to zip and download folder"}), 500
 
 def render_file(file_path, relative_path):
     ext = os.path.splitext(file_path)[1].lower()
