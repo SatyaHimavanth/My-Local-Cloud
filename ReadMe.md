@@ -10,7 +10,7 @@ Step 2:
     Open the project folder in vs code   
 
 Step 2:
-    assign your folder path to base_directory on "app.py" in "line 33"
+    assign your folder path to base_directory on "app.py" in "line 35"
     for example, if you want to host a movies folder in D drive do this
     base_directory = "D:\\Movies"
 
