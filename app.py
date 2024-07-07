@@ -23,11 +23,15 @@ def get_ip_address():
         print(f"Error: {e}")
     return ip_address
 
-app = Flask(__name__)
-
 base_directory = os.path.join(get_working_directory(), 'cloud')
 
 session_code = None
+
+app = Flask(__name__)
+
+@app.route('/check_server')
+def check_server():
+    return jsonify(status='ok')
 
 @app.route('/', methods=['GET'])
 def index():
@@ -38,7 +42,7 @@ def admin():
     return render_template('admin.html')
 
 @app.route('/adminlogin', methods=['POST'])
-def login():
+def admin_login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -87,7 +91,21 @@ def delete_file(subpath):
 @app.route('/files/<path:filename>', methods=['GET'])
 def serve_file(filename):
     file_path = os.path.join(base_directory, filename)
-    return send_file(file_path)
+    return send_file(file_path, as_attachment=False)
+
+@app.route('/available_space', methods=['POST'])
+def available_space():
+    data = request.get_json()
+    free_space = 0
+    if data:
+        folder_path = data.get('folderPath').split('\\')
+        folder_path.pop()
+        folder_path = '\\'.join(folder_path)
+        folder_path = os.path.join(base_directory, folder_path)
+        free_space = shutil.disk_usage(folder_path)[2]
+    else:
+        free_space = shutil.disk_usage(os.getcwd())[2]
+    return jsonify(free_space=free_space)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -104,9 +122,11 @@ def upload_file():
     if not os.path.isdir(upload_path):
         return 'Error: Invalid upload directory', 400
     for file in files:
-        if file:
+        if file and shutil.disk_usage(upload_path)[2]>=int(request.form['file_size']):
             file_path = os.path.join(upload_path, file.filename)
             file.save(file_path)
+        else:
+            return 'Error: Insufficient Disk space', 507
     return redirect(request.form['currentPath'])
 
 @app.route('/createFolder', methods=['POST'])
@@ -173,6 +193,7 @@ def download_folder():
     except Exception as e:
         print(f"Error zipping and downloading folder: {e}")
         return jsonify({"success": False, "message": "Failed to zip and download folder"}), 500
+    
 
 def render_file(file_path, relative_path):
     ext = os.path.splitext(file_path)[1].lower()
@@ -209,7 +230,7 @@ def render_file(file_path, relative_path):
         return render_template('ppt_file.html', file_path=url_for('serve_file', filename=relative_path))
     
     else:
-        return send_file(file_path)
+        return send_file(file_path, as_attachment=False)
         # abort(415, description=f'Unsupported file type: {ext}')
 
 def get_items(directory):
@@ -223,5 +244,4 @@ def get_items(directory):
     return items
 
 if __name__ == '__main__':
-    ip = get_ip_address()
-    app.run(host=ip, port=5000, debug=True)
+    app.run()
