@@ -35,74 +35,104 @@ document.getElementById('uploadForm').addEventListener('submit', function(event)
     const password = document.getElementById('upload_password').value;
     const currentPath = document.getElementById('upload_currentPath').value;
     const progressBarContainer = document.getElementById('progressBar');
-    
+    let upload_size = 0;
+    for(i=0; i<files.length; i++){
+        upload_size += files[i].size;
+    }
+    console.log(upload_size);
     if (files.length === 0) {
         alert('No files selected!');
         return;
     }
-
     progressBarContainer.innerHTML = '';
-
     let results = [];
 
-    for (let i = 0; i < files.length; i++) {
-        const xhr = new XMLHttpRequest();
-        const formData = new FormData();
-        formData.append('password', password);
-        formData.append('currentPath', currentPath);
-        formData.append('files', files[i]);
-
-        const progressBar = document.createElement('div');
-        progressBar.className = 'progress-bar';
-        progressBar.id = 'progress_bar_' + i;
-
-        const progressFill = document.createElement('div');
-        progressFill.className = 'progress-bar-fill';
-        progressFill.id = 'progress_fill_' + i;
-        progressFill.textContent = '0%';
-
-        const uploading_file_name = document.createElement('p');
-        uploading_file_name.id = files[i].name;
-        uploading_file_name.textContent = files[i].name;
-
-        progressBar.appendChild(progressFill);
-        progressBarContainer.appendChild(uploading_file_name);
-        progressBarContainer.appendChild(progressBar);
-
-        xhr.open('POST', this.action, true);
-
-        xhr.upload.onprogress = function(event) {
-            if (event.lengthComputable) {
-                const percentComplete = (event.loaded / event.total) * 100;
-                progressFill.style.width = percentComplete + '%';
-                progressFill.textContent = Math.round(percentComplete) + '%';
+    fetch('/available_space', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ folderPath: currentPath })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.free_space < upload_size) {
+            alert('Total files size '+ Number(upload_size/1000000).toFixed(2) +'Mb exceeds available space "'+ Number(data.free_space/1000000).toFixed(2) +'Mb". Cannot upload files!!');
+            window.location.reload();
+        }
+        else{
+            for (let i = 0; i < files.length; i++) {
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData();
+                formData.append('password', password);
+                formData.append('currentPath', currentPath);
+                formData.append('files', files[i]);
+                formData.append('file_size', files[i].size);
+    
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.id = 'progress_bar_' + i;
+    
+                const progressFill = document.createElement('div');
+                progressFill.className = 'progress-bar-fill';
+                progressFill.id = 'progress_fill_' + i;
+                progressFill.textContent = '0%';
+    
+                const uploading_file_name = document.createElement('p');
+                uploading_file_name.id = files[i].name;
+                uploading_file_name.textContent = files[i].name;
+    
+                progressBar.appendChild(progressFill);
+                progressBarContainer.appendChild(uploading_file_name);
+                progressBarContainer.appendChild(progressBar);
+    
+                xhr.open('POST', this.action, true);
+    
+                xhr.upload.onprogress = function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        progressFill.style.width = percentComplete + '%';
+                        progressFill.textContent = Math.round(percentComplete) + '%';
+                    }
+                };
+    
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        results.unshift(files[i].name + " uploaded successfully");
+                    } else if (xhr.status ===500 || xhr.status === 507) {
+                        results.push(files[i].name + "upload failed: Insufficient Disk Space");
+                    } else {
+                        results.push(files[i].name + " upload failed: " + xhr.statusText);
+                    }
+    
+                    if (results.length === files.length) {
+                        alert(results.join("\n"));
+                        window.location.reload();
+                    }
+                };
+    
+                xhr.onerror = function() {
+                    results.push(files[i].name + " upload failed: Network error");
+    
+                    if (results.length === files.length) {
+                        alert(results.join("\n"));
+                        window.location.reload();
+                    }
+                };
+    
+                xhr.send(formData);
             }
-        };
-
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                results.unshift(files[i].name + " uploaded successfully");
-            } else {
-                results.push(files[i].name + " upload failed: " + xhr.statusText);
-            }
-
-            if (results.length === files.length) {
-                alert(results.join("\n"));
-                window.location.reload();
-            }
-        };
-
-        xhr.onerror = function() {
-            results.push(files[i].name + " upload failed: Network error");
-
-            if (results.length === files.length) {
-                alert(results.join("\n"));
-                window.location.reload();
-            }
-        };
-
-        xhr.send(formData);
-    }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to upload file/s');
+    });
 });
 
 function hasReservedChars(reservedChars, folderName) {
@@ -221,7 +251,164 @@ function sortGridItems(order) {
     }
 }
 
+function saveServerNotFoundPage() {
+    const serverNotFoundHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Server Not Found - Memory Game</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    text-align: center; 
+                    padding: 50px; 
+                }
+                h1 { 
+                    color: #FF0000; 
+                }
+                .game-container {
+                    width: 75%;
+                    margin: 0 auto;
+                    display: grid;
+                    grid-template-columns: repeat(4, 150px);
+                    border: 0.5px solid #848484;
+                    border-radius: 10px;
+                    justify-content: center;
+                }
+                .card {
+                    width: 100px;
+                    height: 100px;
+                    background-color: #53c8e2;
+                    border: 1px solid #54c8eb;
+                    border-radius: 5px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    font-size: 24px;
+                    cursor: pointer;
+                    transition: background-color 0.3s ease;
+                    margin-left: 15px;
+                    margin-top: 40px;
+                    margin-bottom: 40px;
+                }
+                .card.clicked {
+                    background-color: #3498db;
+                    color: #fff;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Server Not Found</h1>
+            <p>The server is currently unreachable. Play a game while you wait!</p>
+
+            <div class="game-container" id="game-container"></div>
+
+            <script>
+                // Define the game cards
+                const cards = ['🌟', '🎉', '🎈', '🎁', '🍰', '🍦', '🍭', '🍩'];
+
+                let cardPairs = cards.concat(cards); // Duplicate cards for matching
+                let shuffledCards = shuffle(cardPairs); // Shuffle the cards
+
+                let flippedCards = [];
+                let matchedCards = [];
+
+                // Function to shuffle array
+                function shuffle(array) {
+                    return array.sort(() => Math.random() - 0.5);
+                }
+
+                // Function to handle card click
+                function handleCardClick(index) {
+                    if (flippedCards.length < 2 && !flippedCards.includes(index) && !matchedCards.includes(index)) {
+                        flippedCards.push(index);
+                        displayCards();
+                        
+                        if (flippedCards.length === 2) {
+                            setTimeout(checkMatch, 1000);
+                        }
+                    }
+                }
+
+                // Function to check if flipped cards match
+                function checkMatch() {
+                    const [card1, card2] = flippedCards;
+                    if (shuffledCards[card1] === shuffledCards[card2]) {
+                        matchedCards.push(card1, card2);
+                    }
+                    flippedCards = [];
+                    displayCards();
+
+                    if (matchedCards.length === cards.length * 2) {
+                        setTimeout(() => {
+                            alert('Congratulations! You matched all pairs!');
+                            window.location.reload();
+                        }, 500);
+                    }
+                }
+
+                // Function to display cards
+                function displayCards() {
+                    const gameContainer = document.getElementById('game-container');
+                    gameContainer.innerHTML = '';
+
+                    shuffledCards.forEach((card, index) => {
+                        const div = document.createElement('div');
+                        div.classList.add('card');
+                        if (flippedCards.includes(index) || matchedCards.includes(index)) {
+                            div.textContent = card;
+                            div.classList.add('clicked');
+                        } else {
+                            div.addEventListener('click', () => handleCardClick(index));
+                        }
+                        gameContainer.appendChild(div);
+                    });
+                }
+
+                // Initial display of cards
+                displayCards();
+            </script>
+        </body>
+        </html>
+
+    `;
+    localStorage.setItem('serverNotFoundPage', serverNotFoundHTML);
+}
+
+function checkServerStatus() {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const fetchTimeout = setTimeout(() => {
+        controller.abort();
+    }, 5000); // Timeout after 5 seconds
+
+    fetch('/check_server', { signal })
+        .then(response => {
+            clearTimeout(fetchTimeout);
+            if (!response.ok) {
+                displayServerNotFoundPage();
+            }
+        })
+        .catch(() => {
+            displayServerNotFoundPage();
+        });
+}
+
+function displayServerNotFoundPage() {
+    const serverNotFoundHTML = localStorage.getItem('serverNotFoundPage');
+    if (serverNotFoundHTML) {
+        document.open();
+        document.write(serverNotFoundHTML);
+        document.close();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    saveServerNotFoundPage();
+    document.body.addEventListener('click', checkServerStatus);
+
     var sessionCode = sessionStorage.getItem('session_code');
     var deleteButtons = document.querySelectorAll('.delete');
     var code = document.getElementById('secret_code').innerText;
