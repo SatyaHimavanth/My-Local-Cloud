@@ -1,0 +1,20 @@
+services:
+- type: web
+  name: My-Cloud
+  runtime: python
+  repo: https://github.com/SatyaHimavanth/My-Local-Cloud
+  branch: hosting
+  plan: free
+  envVars:
+  - key: PASSWORD
+    sync: false
+  - key: ADMIN
+    sync: false
+  - key: CREATE_PASSWORD
+    sync: false
+  - key: UPLOAD_PASSWORD
+    sync: false
+  region: singapore
+  buildCommand: pip install -r requirements.txt
+  startCommand: gunicorn app:app
+version: "1"
